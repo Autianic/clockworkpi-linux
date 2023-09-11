@@ -1,6 +1,8 @@
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index 2d585bb..3fb9503 100644
 --- a/arch/arm64/boot/dts/rockchip/Makefile
 +++ b/arch/arm64/boot/dts/rockchip/Makefile
-@@ -29,6 +29,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3368-lion-haikou.dtb
+@@ -28,6 +28,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3368-lion-haikou.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3368-orion-r68-meta.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3368-px5-evb.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3368-r88.dtb
@@ -8,6 +10,9 @@
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-eaidk-610.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-evb.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-ficus.dtb
+diff --git b/arch/arm64/boot/dts/rockchip/rk3399-clockworkpi-a06.dts b/arch/arm64/boot/dts/rockchip/rk3399-clockworkpi-a06.dts
+new file mode 100644
+index 0000000..94044f3
 --- /dev/null
 +++ b/arch/arm64/boot/dts/rockchip/rk3399-clockworkpi-a06.dts
 @@ -0,0 +1,1154 @@
@@ -249,7 +254,7 @@
 +		voltage-max-design-microvolt = <4200000>;
 +		re-charge-voltage-microvolt = <4000000>;
 +		// adjust the following params according to your battery specs
-+		voltage-min-design-microvolt = <3300000>;
++		voltage-min-design-microvolt = <3000000>;
 +		energy-full-design-microwatt-hours = <24790000>; // 2x3350mAh * 3.7v
 +		charge-full-design-microamp-hours = <6700000>; // 2x3350mAh
 +	};
@@ -387,9 +392,9 @@
 +	};
 +
 +	dsi_panel: panel {
-+		compatible = "cw,cwd686";
++		compatible = "";
 +		reg = <0>;
-+		backlight = <&ocp8178_backlight>;
++		backlight = <&>;
 +		reset-gpios = <&gpio2 RK_PD4 GPIO_ACTIVE_HIGH>;
 +		rotation = <90>;
 +		dsi,lanes = <4>;
@@ -1165,6 +1170,9 @@
 +	};
 +};
 +
+diff --git b/arch/arm64/boot/dts/rockchip/rk3399-opp-clockworkpi-a06.dtsi b/arch/arm64/boot/dts/rockchip/rk3399-opp-clockworkpi-a06.dtsi
+new file mode 100644
+index 0000000..26cf745
 --- /dev/null
 +++ b/arch/arm64/boot/dts/rockchip/rk3399-opp-clockworkpi-a06.dtsi
 @@ -0,0 +1,159 @@
@@ -1327,12 +1335,14 @@
 +&gpu {
 +	operating-points-v2 = <&gpu_opp_table>;
 +};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3399.dtsi b/arch/arm64/boot/dts/rockchip/rk3399.dtsi
+index 928948e..cc80c3b 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3399.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3399.dtsi
-@@ -446,7 +446,7 @@
+@@ -445,7 +445,7 @@ usbdrd3_0: usb@fe800000 {
  		reset-names = "usb3-otg";
  		status = "disabled";
- 
+
 -		usbdrd_dwc3_0: usb@fe800000 {
 +		usbdrd_dwc3_0: dwc3@fe800000 {
  			compatible = "snps,dwc3";

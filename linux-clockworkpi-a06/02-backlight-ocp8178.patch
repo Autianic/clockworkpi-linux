@@ -1,8 +1,8 @@
 diff --git a/drivers/video/backlight/Kconfig b/drivers/video/backlight/Kconfig
-index d83c87b90..2f1b6105e 100644
+index 51387b1..f4e8f77 100644
 --- a/drivers/video/backlight/Kconfig
 +++ b/drivers/video/backlight/Kconfig
-@@ -456,6 +456,12 @@ config BACKLIGHT_LED
+@@ -472,6 +472,12 @@ config BACKLIGHT_LED
  	  If you have a LCD backlight adjustable by LED class driver, say Y
  	  to enable this driver.
  
@@ -16,17 +16,17 @@ index d83c87b90..2f1b6105e 100644
  
  endmenu
 diff --git a/drivers/video/backlight/Makefile b/drivers/video/backlight/Makefile
-index 685f3f1ca..f1160d626 100644
+index f72e1c3..4fb1a81 100644
 --- a/drivers/video/backlight/Makefile
 +++ b/drivers/video/backlight/Makefile
-@@ -57,3 +57,4 @@ obj-$(CONFIG_BACKLIGHT_WM831X)		+= wm831x_bl.o
+@@ -58,3 +58,4 @@ obj-$(CONFIG_BACKLIGHT_WM831X)		+= wm831x_bl.o
  obj-$(CONFIG_BACKLIGHT_ARCXCNN) 	+= arcxcnn_bl.o
  obj-$(CONFIG_BACKLIGHT_RAVE_SP)		+= rave-sp-backlight.o
  obj-$(CONFIG_BACKLIGHT_LED)		+= led_bl.o
 +obj-$(CONFIG_BACKLIGHT_OCP8178)		+= ocp8178_bl.o
-diff --git a/drivers/video/backlight/ocp8178_bl.c b/drivers/video/backlight/ocp8178_bl.c
+diff --git b/drivers/video/backlight/ocp8178_bl.c b/drivers/video/backlight/ocp8178_bl.c
 new file mode 100644
-index 000000000..db8db1771
+index 0000000..db8db17
 --- /dev/null
 +++ b/drivers/video/backlight/ocp8178_bl.c
 @@ -0,0 +1,277 @@

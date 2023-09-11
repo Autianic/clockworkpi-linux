@@ -175,7 +175,7 @@
 @@ -205,6 +205,17 @@ config PWM_FSL_FTM
  	  To compile this driver as a module, choose M here: the module
  	  will be called pwm-fsl-ftm.
- 
+
 +config PWM_GP7101
 +	tristate "GP7101 PWM support"
 +	depends on I2C
@@ -192,7 +192,7 @@
  	depends on ARCH_HISI || COMPILE_TEST
 --- /dev/null
 +++ b/drivers/pwm/pwm-gp7101.c
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,118 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Driver for GP7101 Generic Pulse Width Modulator
@@ -264,8 +264,7 @@
 +};
 +
 +
-+static int gp7101_pwm_probe(struct i2c_client *client,
-+	const struct i2c_device_id *id)
++static int gp7101_pwm_probe(struct i2c_client *client)
 +{
 +	struct gp7101_pwm_chip *gp7101;
 +	int ret;

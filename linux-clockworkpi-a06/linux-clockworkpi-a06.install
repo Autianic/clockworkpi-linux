@@ -2,12 +2,12 @@ post_install() {
   # Add modules to mkinitcpio
   if grep -Fxq "MODULES=()" "/etc/mkinitcpio.conf"; then
     echo 'Updating mkinitcpio.conf with required modules'
-    sed -i 's/MODULES=()/MODULES=(rtc_rk808 rockchipdrm panel_cwd686 ocp8178_bl)/g' /etc/mkinitcpio.conf
+    sed -i 's/MODULES=()/MODULES=(rtc_rk808 rockchipdrm panel_cwd686 panel_cwu50 ocp8178_bl)/g' /etc/mkinitcpio.conf
     mkinitcpio -p linux-clockworkpi-a06
   else
     echo 'Could not automatically update /etc/mkinitcpio.conf with required modules'
     echo 'Please add the following modules to MODULES:'
-    echo '    rtc_rk808 rockchipdrm panel_cwd686 ocp8178_bl'
+    echo '    rtc_rk808 rockchipdrm panel_cwd686 panel_cwu50 ocp8178_bl'
     echo 'Then run:'
     echo '    mkinitcpio -p linux-clockworkpi-a06'
     echo 'You will need to change these back manually if you uninstall this kernel'
@@ -29,5 +29,5 @@ post_remove() {
 
   # Change back mkinitcpio
   echo 'Undoing mkinitcpio module changes'
-  sed -i 's/MODULES=(rtc_rk808 rockchipdrm panel_cwd686 ocp8178_bl)/MODULES=()/g' /etc/mkinitcpio.conf
+  sed -i 's/MODULES=(rtc_rk808 rockchipdrm panel_cwd686 panel_cwu50 ocp8178_bl)/MODULES=()/g' /etc/mkinitcpio.conf
 }

@@ -24,7 +24,7 @@ source=("https://ftp.denx.de/pub/u-boot/u-boot-${pkgver/rc/-rc}.tar.bz2"
         "0003-RKTRUST.patch")
 # mainline ATF: "https://github.com/rockchip-linux/rkbin/archive/refs/heads/master.zip"
 sha256sums=('68e065413926778e276ec3abd28bb32fa82abaa4a6898d570c1f48fbdb08bcd0'
-            'b9fa37c39ef6005df83de035567a1b988c36cfc41fc17f012c8c133fd8638996'
+            'SKIP'
             '7e409c95d72dd1f54b88d56c00dd1cf44875f4c9eb0b90a37dfb75b863aff415'
             '971ec97e7e4b15cb2731db51b54f80802d933f5a416dbfd64f8149a0bb066dc6'
             '2d2cda003764fdb8030814005b26bf74e928ec884440c18ad07edad2ebff52ee')
@@ -56,7 +56,7 @@ build() {
 
 # RKBIN TFA
   echo -e "\nUsing closed-source TF-A from Rockchip...\n"
-  cp -v ${srcdir}/rkbin-master/bin/rk33/rk3399_bl31_v1.35.elf ${srcdir}/u-boot-${pkgver/rc/-rc}/bl31.elf
+  cp -v ${srcdir}/rkbin-master/bin/rk33/rk3399_bl31_v1.36.elf ${srcdir}/u-boot-${pkgver/rc/-rc}/bl31.elf
 
 # mainline TFA
 # echo -e "\nBuilding TF-A for ClockworkPI A06...\n"
@@ -80,8 +80,8 @@ build() {
   make EXTRAVERSION=-$(date -R | cut -c18-25) u-boot-dtb.bin
 
   cd "${srcdir}/rkbin-master"
-  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_800MHz_v1.27.bin idbloader.img
-  cat bin/rk33/rk3399_miniloader_v1.26.bin >> idbloader.img
+  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_800MHz_v1.30.bin idbloader.img
+  cat bin/rk33/rk3399_miniloader_v1.30.bin >> idbloader.img
   qemu-x86_64 tools/loaderimage --pack --uboot ../u-boot-2022.04/u-boot-dtb.bin uboot.img 0x00200000
   qemu-x86_64 tools/trust_merger RKTRUST/RK3399TRUST.ini
 }

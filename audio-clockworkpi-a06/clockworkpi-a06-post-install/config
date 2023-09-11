@@ -1,0 +1,8 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = https://gitlab.manjaro.org/manjaro-arm/packages/community/clockworkpi-a06-post-install.git
+	fetch = +refs/*:refs/*
+	mirror = true
