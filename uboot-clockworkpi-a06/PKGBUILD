@@ -26,7 +26,7 @@ source=("https://ftp.denx.de/pub/u-boot/u-boot-${pkgver/rc/-rc}.tar.bz2"
 sha256sums=('68e065413926778e276ec3abd28bb32fa82abaa4a6898d570c1f48fbdb08bcd0'
             'SKIP'
             '7e409c95d72dd1f54b88d56c00dd1cf44875f4c9eb0b90a37dfb75b863aff415'
-            '971ec97e7e4b15cb2731db51b54f80802d933f5a416dbfd64f8149a0bb066dc6'
+            '9e2287b5fd668d87b6cb9f3580b60f41dbf3aa01b583cda17709899e3ced7e46'
             '2d2cda003764fdb8030814005b26bf74e928ec884440c18ad07edad2ebff52ee')
 
 prepare() {
@@ -80,8 +80,13 @@ build() {
   make EXTRAVERSION=-$(date -R | cut -c18-25) u-boot-dtb.bin
 
   cd "${srcdir}/rkbin-master"
-  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_800MHz_v1.30.bin idbloader.img
-  cat bin/rk33/rk3399_miniloader_v1.30.bin >> idbloader.img
+  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_666MHz_v1.30.bin idbloader-ddr-666MHz.img
+  cat bin/rk33/rk3399_miniloader_v1.30.bin >> idbloader-ddr-666MHz.img
+  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_800MHz_v1.30.bin idbloader-ddr-800MHz.img
+  cat bin/rk33/rk3399_miniloader_v1.30.bin >> idbloader-ddr-800MHz.img
+  qemu-x86_64 tools/mkimage -n rk3399 -T rksd -d bin/rk33/rk3399_ddr_933MHz_v1.30.bin idbloader-ddr-933MHz.img
+  cat bin/rk33/rk3399_miniloader_v1.30.bin >> idbloader-ddr-933MHz.img
+
   qemu-x86_64 tools/loaderimage --pack --uboot ../u-boot-2022.04/u-boot-dtb.bin uboot.img 0x00200000
   qemu-x86_64 tools/trust_merger RKTRUST/RK3399TRUST.ini
 }
@@ -91,5 +96,5 @@ package() {
 
   mkdir -p "${pkgdir}/boot/extlinux"
 
-  install -D -m 0644 idbloader.img uboot.img trust.img -t "${pkgdir}/boot"
+  install -D -m 0644 idbloader-ddr-666MHz.img idbloader-ddr-800MHz.img idbloader-ddr-933MHz.img uboot.img trust.img -t "${pkgdir}/boot"
 }

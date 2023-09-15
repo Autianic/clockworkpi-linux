@@ -57,6 +57,11 @@ Using patches from ClockworkPi's https://github.com/clockworkpi/uConsole/tree/ma
 
 ## Compilation
 
+Packages are also provided prebuilt in the release section of this repo. If you
+wish to compile these from source instead, continue. Otherwise, skip to
+`On the host: preparing the Arch Linux ARM image` and pull the files needed from
+a release.
+
 ### Prerequisites
 
 Setup an (aarch64) Arch Linux ARM chroot environment on a preferably beefy
@@ -154,10 +159,12 @@ already present:
 pacman -S vim
 ```
 
-Make appropiate changes to `/etc/locale.gen` and `/etc/locale.conf` and
-generate locales:
+Uncomment an appropriate language in `/etc/locale.gen`, set a language in
+`/etc/locale.conf` and generate locales:
 
 ```
+vim /etc/locale.gen
+printf '%s\n' 'LANG=en_US.UTF-8' > /etc/locale.conf
 locale-gen
 ```
 
@@ -223,60 +230,89 @@ git clone https://github.com/autianic/clockworkpi-linux.git
 cd clockworkpi-linux
 ```
 
-`cd` into each of the directories and build them using:
+There are several directories in which packages are built:
+
+| Package			| Purpose					|
+| ----------------------------- | --------------------------------------------- |
+| audio-clockworkpi-a06		| Provides ALSA	profiles for sound.		|
+| ffmpeg-v4l2-request-git	| Patched FFmpeg with support for hardware accelerated video decoding for rockchip SoCs. |
+| ffmpeg4.4-v4l2-request-git	| Same but for FFmpeg version 4.4.		|
+| gearbox-clockworkpi-a06	| CLI utility to set CPU/GPU profiles.		|
+| linux-clockworkpi-a06		| Patched Linux kernel with support for ClockworkPi hardware. |
+| linux-clockworkpi-a06-llvm	| Same as above but built with LLVM/Clang instead of gcc. |
+| linux-clockworkpi-a06-llvm-lto	| Same as above but with full LTO.	|
+| networking-clockworkpi-a06	| Firmware files for Broadcom BCM4345C5 to support WiFi and Bluetooth. |
+| rkbin-aarch64-hack		| Needed to build `uboot-clockworkpi-a06`.	|
+| uboot-clockworkpi-a06		| U-Boot images.				|
+| wiringpi-clockworkpi		| GPIO Access Library for the ClockworkPi A06 and A04 modules. |
+
+To build a package, `cd` into a directory you are interested in and build it
+using, though read a bit further before building anything yet:
 
 ```
 MAKEFLAGS="-j$(nproc)" makepkg -si
 ```
 
 The options `--noextract --noprepare --skipchecksums` may additionally be useful
-for troubleshooting or to continue an aborted buld session. These instruct
+for troubleshooting or to continue an aborted build session. These instruct
 `makepkg` to not recreate the extracted, patched and compiled kernel source when
 rebuilding the package.
 
-If you want to compile the U-Boot images from source:
+If the build fails, make sure that the subdirectories `pkg` and `src` don't
+exist to ensure a clean build before you start building the package using
+`makepkg`.
 
-```
-rkbin-aarch64-hack
-uboot-clockworkpi-a06
-```
+If you want to compile the U-Boot images from source, build these packages in
+the following order:
 
-Omit the `-i` `makepkg` option from the `uboot-clockworkpi-a06` package and
+- `rkbin-aarch64-hack`
+- `uboot-clockworkpi-a06`
+
+Omit the `makepkg` option `-i` from the `uboot-clockworkpi-a06` package and
 disallow the build process from installing the U-Boot images on your system (if
 it asks you).
 
 The `uboot-clockworkpi-a06` package is a bit of a moving target because one of
-its sources are pulled from their master branch. The U-Boot images will be later
-used to write them into an area of the first 32K sectors. You may get these from
-the releases section instead:
+its sources are pulled from their master branch. As such, the build may fail.
 
-- `idbloader.img`
+The U-Boot images will be later used to write them into an area of the first 32K
+sectors. You may get these from the releases section instead:
+
+- `idbloader-ddr-800MHz.img`
 - `uboot.img`
 - `trust.img`
+
+There is also a 666MHz and a 933MHz variant of the idbloader which you may like
+to use instead.
 
 Place them next to the directory of the chroot. If you built the U-Boot package,
 copy them from there:
 
 ```
 # executing from the host:
-cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/idbloader.img ./
+cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/idbloader-ddr-800MHz.img ./
 cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/uboot.img ./
 cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/trust.img ./
 ```
 
 The most interesting packages are:
 
-```
-audio-clockworkpi-a06
-networking-clockworkpi-a06
-linux-clockworkpi-a06
-```
+- `audio-clockworkpi-a06`
+- `networking-clockworkpi-a06`
+- `linux-clockworkpi-a06`
 
-I didn't compile the rest of the packages so it's up to you if you want the
-other packages.
+Prefer to compile the Linux package last.
 
-Prefer to compile the Linux package last. If you started building the Linux
-kernel, continue with the following steps in the mean time.
+There are also `llvm` and `llvm-lto` variants if you would like to use these
+instead. For the `llvm` and `llvm-lto` variants, it will ask you for a few
+kernel configuration options, one of which lets you choose whether to use LTO or
+not. Both variants are basically the same except for the package name, so the
+LTO decision has to be made when kconfig appears during the build. I couldn't
+manage to prepare a kernel configuration for both variants so that it would
+build the kernel right away without asking more questions.
+
+If you started building the Linux kernel, continue with the following steps in
+the mean time.
 
 It is probably worth to temporarily set a power management option to prevent the
 system from sleeping. The building process takes a long time considering that we
@@ -290,6 +326,17 @@ the default answer by just hitting Enter, though you might like to have a closer
 look and compile some drivers as kernel modules (answer `m`). Eventually the
 terminal cursor will stop at the start of a new line and it will then start to
 build the kernel.
+
+Note: the packages
+
+- `ffmpeg-v4l2-request-git`
+- `ffmpeg4.4-v4l2-request-git`
+- `wiringpi-clockworkpi`
+- `gearbox-clockworkpi-a06`
+
+are subject for removal in this repo due to them of no use for me personally, I
+can't guarantee that these are working and thus I can't really provide support
+for them.
 
 ## On the host: preparing the Arch Linux ARM image
 
@@ -336,8 +383,10 @@ habits here). It would cause U-Boot to run into the BIOS partition otherwise.
 Write the changes with `w` and gdisk will drop you to the shell afterwards if
 all went well.
 
-As a root user, bind the `./mmc.img` file as a loop device so that we have
-better access to the partitions inside that image:
+Switch to the root user.
+
+Bind the `./mmc.img` file as a loop device so that we have better access to the
+partitions inside that image:
 
 ```
 udisksctl loop-setup -f ./mmc.img
@@ -396,8 +445,9 @@ rmdir ./boot
 mount /dev/loop0p1 ./OS/boot
 ```
 
-Create a subdirectory called `extlinux` in the mounted boot partition and create
-a file named `extlinux.conf` with the following content:
+Create a subdirectory called `extlinux` in the mounted boot partition. In that
+newly created directory, create a file named `extlinux.conf` with the following
+content:
 
 ```
 LABEL Arch ARM
@@ -429,17 +479,24 @@ chown user:group ./Image ./initramfs-linux.img
 ```
 
 Append `fstab` entries as root so that UUIDs can be resolved like in the `lsblk`
-call:
+call (make sure no chroot sessions are running on `./OS` otherwise chroot
+specific mounts would be included. Check the fstab afterwards if in doubt and
+remove the offending lines):
 
 ```
 genfstab -t UUID ./OS >> ./OS/etc/fstab
 ```
 
+Make sure that all desired packages are built or are downloaded from the
+release section.
+
+Copy the package files to a place inside `./OS` from which you will later
+install them, i.e. `./OS/root/`.
+
 You may now like to chroot into `./OS` and proceed with the initialisation of
-the Arch installation as you like. If you are not planning to use QEMU to do a
-graphical installation or expect to be able to finish the installation on the
-uConsole itself, copy the built packages into the OS partition and install these
-as shown further down in the next sections. When you're done, continue here.
+the Arch installation as you like. If you want to use a VM, continue without the
+chroot. If chrooting, install the built packages using the instructions in the
+`Package installation` section further down. When you're done, continue here.
 
 Unmount the first and second partition and remove the loop device:
 
@@ -449,16 +506,18 @@ umount ./OS
 udisksctl loop-delete -b /dev/loopn
 ```
 
+Get `idbloader-ddr-800MHz.img`, `uboot.img`, `trust.img` from the release
+section if you haven't built U-Boot.
+
 `dd` the U-Boot binaries into the `./mmc.img`:
 
 ```
-dd if=./idbloader.img of=./mmc.img bs=512 seek=64 conv=notrunc,fsync
+dd if=./idbloader-ddr-800MHz.img of=./mmc.img bs=512 seek=64 conv=notrunc,fsync
 dd if=./uboot.img of=./mmc.img bs=512 seek=16384 conv=notrunc,fsync
 dd if=./trust.img of=./mmc.img bs=512 seek=24576 conv=notrunc,fsync
 ```
 
-Exit root if you haven't already and proceed with the next steps. Keep Linux
-compiling in the background.
+`exit` root and proceed with the next steps.
 
 ### Run Arch Linux ARM in a VM
 
@@ -528,8 +587,8 @@ vfs0	/mnt/share	9p	defaults,noauto,user,trans=virtio,version=9p2000.L,msize=8388
 
 ### Package installation
 
-Copy over the previously generated packages and replace the Linux kernel on the
-target system via (adjust the paths as needed):
+Copy over the previously generated packages if not done already and replace the
+Linux kernel on the target system via (adjust the paths as needed):
 
 ```
 pacman -U linux-clockworkpi-a06-x.x.x-1-aarch64.pkg.tar.xz
@@ -539,16 +598,19 @@ pacman -U linux-clockworkpi-a06-headers-x.x.x-1-aarch64.pkg.tar.xz
 If there are conflicting files, those should be the dts files that reside in the
 `/boot/dtbs` directory. Delete the conflicting files and retry the installation.
 
-Watch the pacman install logs and adjust the mkinitcpio configuration to load
-the modules needed for the display panel and more.
+Watch the `pacman` install logs and adjust the `mkinitcpio` configuration to
+load the modules needed for the display panel and more.
 
 Also install the other packages as needed to get WiFi, bluetooth and audio
 working.
 
-Once everything is done, shut the VM down and make sure outstanding writes to
-the `mmc.img` are done and nothing is writing to it.
+Return to the section you came from, if you were directed here.
 
 ### Flashing the prepared image onto the SD card
+
+Once everything is done, shut the VM or chroot session down and make sure
+outstanding writes to the `mmc.img` are done and nothing is writing to it and
+nothing of it is mounted.
 
 You may now `dd` the image to the SD card. Due to buffering the first bunch of
 Gigabytes will go through very fast and `dd` will seemingly hang at the end of

@@ -1,40 +1,40 @@
 notice_uboot() {
-  echo "New version of U-Boot firmware can be flashed to your microSD card (mmcblk1)"
-  echo "or eMMC module (mmcblk2).  You can do that by running:"
-  echo "#   sudo dd if=/boot/idbloader.img of=/dev/mmcblkX seek=64 conv=notrunc,fsync"
-  echo "#   sudo dd if=/boot/uboot.img of=/dev/mmcblkX seek=16384 conv=notrunc,fsync"
-  echo "#   sudo dd if=/boot/trust.img of=/dev/mmcblkX seek=24576 conv=notrunc,fsync"
+	printf '%s\n' "New version of U-Boot firmware can be flashed to your microSD card (mmcblk1)"
+	printf '%s\n' "or eMMC module (mmcblk2).  You can do that by running:"
+	printf '%s\n' "# sudo dd if=/boot/idbloader-ddr-800MHz.img of=/dev/mmcblkX seek=64 conv=notrunc,fsync"
+	printf '%s\n' "# sudo dd if=/boot/uboot.img of=/dev/mmcblkX seek=16384 conv=notrunc,fsync"
+	printf '%s\n' "# sudo dd if=/boot/trust.img of=/dev/mmcblkX seek=24576 conv=notrunc,fsync"
 }
 
 create_config() {
-  mkdir -p /boot/extlinux
-  echo "LABEL Arch ARM
+	mkdir -p /boot/extlinux
+	printf '%s\n' "LABEL Arch ARM
 KERNEL /boot/Image
 FDT /boot/dtbs/rockchip/rk3399-clockworkpi-a06.dtb
-APPEND initrd=/boot/initramfs-linux.img console=ttyS2,1500000 root=LABEL=ROOT_ARCH rw rootwait audit=0" \
-    > /boot/extlinux/extlinux.conf
+APPEND initrd=/boot/initramfs-linux.img root=LABEL=ROOT_ARCH rw rootwait audit=0" \
+		> /boot/extlinux/extlinux.conf
 }
 
 post_install() {
-  notice_uboot
-  if [ -f /boot/extlinux/extlinux.conf.pacsave ]; then
-    mv /boot/extlinux/extlinux.conf.pacsave /boot/extlinux/extlinux.conf
-  fi
-  if [ -f /boot/extlinux/extlinux.conf ]; then
-    echo "Keeping old extlinux.conf file..."
-  else
-    create_config
-  fi
+	notice_uboot
+	if [ -f /boot/extlinux/extlinux.conf.pacsave ]; then
+		mv /boot/extlinux/extlinux.conf.pacsave /boot/extlinux/extlinux.conf
+	fi
+	if [ -f /boot/extlinux/extlinux.conf ]; then
+		printf '%s\n' "Keeping old extlinux.conf file..."
+	else
+		create_config
+	fi
 }
 
 post_upgrade() {
-  notice_uboot
-  if [ -f /boot/extlinux/extlinux.conf.pacsave ]; then
-    mv /boot/extlinux/extlinux.conf.pacsave /boot/extlinux/extlinux.conf
-  fi
-  if [ -f /boot/extlinux/extlinux.conf ]; then
-    echo "Keeping old extlinux.conf file..."
-  else
-    create_config
-  fi
+	notice_uboot
+	if [ -f /boot/extlinux/extlinux.conf.pacsave ]; then
+		mv /boot/extlinux/extlinux.conf.pacsave /boot/extlinux/extlinux.conf
+	fi
+	if [ -f /boot/extlinux/extlinux.conf ]; then
+		printf '%s\n' "Keeping old extlinux.conf file..."
+	else
+		create_config
+	fi
 }

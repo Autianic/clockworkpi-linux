@@ -19,8 +19,8 @@
 pkgname=ffmpeg-v4l2-request-git
 # pkgname=ffmpeg
 _srcname=FFmpeg
-pkgver=6.0.r329749
-pkgrel=2
+pkgver=6.0.r329751
+pkgrel=1
 epoch=2
 pkgdesc='FFmpeg with v4l2-request and drmprime'
 arch=('armv7h' 'aarch64')
