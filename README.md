@@ -6,10 +6,9 @@ uConsole. The screen is different from that of the DevTerm, so the DevTerm
 panel patches can't be used with the uConsole. They are still included here and
 can be chosen with some adjustments of the PKGBUILD file of the Linux package.
 
-If you experience problems with the build process, let me know. Unfortunately
-I'm not able to fully validate the instructions at the moment. Errors should be
+If you experience problems with the build process, let me know. Errors should be
 something of the type like mismatching paths or checksums, so if these occur,
-you might be able to fix these easily. Just wanted to let you know.
+you might be able to fix these easily.
 
 Based on Yatli's https://github.com/yatli/arch-linux-arm-clockworkpi-a06.git
 which in turn is based on Armbian's https://github.com/armbian/build.git
@@ -74,7 +73,7 @@ The packages needed on the host system are:
 pacman -S arch-install-scripts base-devel qemu-user-static qemu-user-static-binfmt
 ```
 
-`arch-install-scripts` is needed to `arch-chroot` in to the Arch Linux ARM
+`arch-install-scripts` is needed to `arch-chroot` into the Arch Linux ARM
 chroot environment.
 
 `base-devel` obviously provides some more packages regarding development.
@@ -262,6 +261,18 @@ If the build fails, make sure that the subdirectories `pkg` and `src` don't
 exist to ensure a clean build before you start building the package using
 `makepkg`.
 
+U-Boot images will be later used to write them into an area of the first 32K
+sectors. You may get these from the releases section instead:
+
+- `idbloader-ddr-800MHz.img`
+- `uboot.img`
+- `trust.img`
+
+Place them next to the directory of the chroot.
+
+There is also a 666MHz and a 933MHz variant of the idbloader which you may like
+to use instead.
+
 If you want to compile the U-Boot images from source, build these packages in
 the following order:
 
@@ -275,18 +286,7 @@ it asks you).
 The `uboot-clockworkpi-a06` package is a bit of a moving target because one of
 its sources are pulled from their master branch. As such, the build may fail.
 
-The U-Boot images will be later used to write them into an area of the first 32K
-sectors. You may get these from the releases section instead:
-
-- `idbloader-ddr-800MHz.img`
-- `uboot.img`
-- `trust.img`
-
-There is also a 666MHz and a 933MHz variant of the idbloader which you may like
-to use instead.
-
-Place them next to the directory of the chroot. If you built the U-Boot package,
-copy them from there:
+If you built the U-Boot package, copy the U-Boot images from there:
 
 ```
 # executing from the host:
@@ -295,7 +295,7 @@ cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockwork
 cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/trust.img ./
 ```
 
-The most interesting packages are:
+The most interesting packages regarding basic hardware support are:
 
 - `audio-clockworkpi-a06`
 - `networking-clockworkpi-a06`
@@ -311,7 +311,7 @@ LTO decision has to be made when kconfig appears during the build. I couldn't
 manage to prepare a kernel configuration for both variants so that it would
 build the kernel right away without asking more questions.
 
-If you started building the Linux kernel, continue with the following steps in
+Start compiling the mentioned packages and continue with the following steps in
 the mean time.
 
 It is probably worth to temporarily set a power management option to prevent the
@@ -336,7 +336,8 @@ Note: the packages
 
 are subject for removal in this repo due to them of no use for me personally, I
 can't guarantee that these are working and thus I can't really provide support
-for them.
+for them. If they start to fail to build and can't be fixed easily, these may be
+dropped from this repo.
 
 ## On the host: preparing the Arch Linux ARM image
 
@@ -367,13 +368,19 @@ gdisk ./mmc.img
 In the prompt, use `o` to initialise a partition table. Use `n` to create a new
 partition. This is going to hold the U-Boot configuration along with the Linux
 kernel and its initramfs. Set its starting offset to sector `32768`. The U-Boot
-binaries will later be written into the preceding sectors. Size the partiton
-`+1GiB` (include the `+` sign. Otherwise it is seen as an absolute end offset).
+binaries will later be written into the preceding sectors. Size the partition
+`+1G` (include the `+` sign. Otherwise it is seen as an absolute end offset).
 When asked for a partition type, set it to Linux filesystem which would be
 gdisk's `8300` or GUID `0FC63DAF-8483-4772-8E79-3D69D8477DE4`.
 
 Create another partition that is going to hold the actual OS. From that point
-you can pretty much add any other partition you want.
+you can pretty much add any other partition you want. Similar to before, use `n`
+to create a new partition, hit `Enter` with no value to have no gap to the
+previous partition, and then set i.e. `+15G` to have the partition sized `15GiB`
+or leave the value for the end offset empty to fill up the rest of the space.
+
+See `man gdisk` or https://wiki.archlinux.org/title/GPT_fdisk for help on
+`gdisk`.
 
 Make sure the first partition is going to be the U-Boot partition that is going
 to hold the Linux kernel. Don't create a BIOS partition as if you were going to
@@ -403,7 +410,7 @@ udisksctl loop-delete -b /dev/loopn
 Format the first partition as ext4 and the second one to whatever you like as
 long as the Linux kernel can read from there, i.e. `f2fs`, `ext4` or `btrfs`.
 
-When formatting `ext4`, omit the Journaling to reduce overall writes. The
+When formatting with `ext4`, omit the journaling to reduce overall writes. The
 `mkfs.ext4` option for that would be `-O ^has_journal`.
 
 Example:
@@ -494,9 +501,10 @@ Copy the package files to a place inside `./OS` from which you will later
 install them, i.e. `./OS/root/`.
 
 You may now like to chroot into `./OS` and proceed with the initialisation of
-the Arch installation as you like. If you want to use a VM, continue without the
-chroot. If chrooting, install the built packages using the instructions in the
-`Package installation` section further down. When you're done, continue here.
+the Arch installation as you like. If you want to start with a VM, continue
+without the chroot. If chrooting, install the built packages using the
+instructions in the `Package installation` section further down. When you're
+done, continue here.
 
 Unmount the first and second partition and remove the loop device:
 
@@ -530,7 +538,7 @@ Linux kernel, you may skip this section.
 Create a subdirectory called `shared`, which may be used to conveniently
 transfer files in and out of the VM.
 
-Create a `start.sh` shell script next for the VM:
+Create a `start.sh` shell script next to the `mmc.img` for the VM:
 
 ```
 #/bin/sh
