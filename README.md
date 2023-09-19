@@ -304,12 +304,7 @@ The most interesting packages regarding basic hardware support are:
 Prefer to compile the Linux package last.
 
 There are also `llvm` and `llvm-lto` variants if you would like to use these
-instead. For the `llvm` and `llvm-lto` variants, it will ask you for a few
-kernel configuration options, one of which lets you choose whether to use LTO or
-not. Both variants are basically the same except for the package name, so the
-LTO decision has to be made when kconfig appears during the build. I couldn't
-manage to prepare a kernel configuration for both variants so that it would
-build the kernel right away without asking more questions.
+instead. In most workloads these should not make much of a difference.
 
 Start compiling the mentioned packages and continue with the following steps in
 the mean time.

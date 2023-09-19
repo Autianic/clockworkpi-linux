@@ -2,8 +2,7 @@ diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
 index 2b9d6db..b0fd26d 100644
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -805,2 +805,14 @@ config DRM_PANEL_CWD50
- 	  system interfaces.
+@@ -812,1 +812,13 @@ config DRM_PANEL_CWD50
 +
 +config DRM_PANEL_CWU50
 +	tristate "CWU50 panel"
@@ -22,7 +21,7 @@ index ff16978..01733a2 100644
 --- a/drivers/gpu/drm/panel/Makefile
 +++ b/drivers/gpu/drm/panel/Makefile
 @@ -82,1 +82,2 @@ obj-$(CONFIG_DRM_PANEL_VISIONOX_RM69299) += panel-visionox-rm69299.o
- obj-$(CONFIG_DRM_PANEL_CWD686) += panel-cwd686.o
+ obj-$(CONFIG_DRM_PANEL_WIDECHIPS_WS2401) += panel-widechips-ws2401.o
 +obj-$(CONFIG_DRM_PANEL_CWU50) += panel-cwu50.o
 diff --git b/drivers/gpu/drm/panel/panel-cwu50.c b/drivers/gpu/drm/panel/panel-cwu50.c
 new file mode 100644

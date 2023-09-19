@@ -50,7 +50,7 @@
  #include <dt-bindings/thermal/thermal.h>
 
  / {
-@@ -2677,4 +2678,27 @@ pcie_clkreqnb_cpm: pci-clkreqnb-cpm {
+@@ -2899,4 +2899,27 @@ pcie_clkreqnb_cpm: pci-clkreqnb-cpm {
  		};
 
  	};
@@ -80,9 +80,8 @@
  };
 --- a/drivers/firmware/Kconfig
 +++ b/drivers/firmware/Kconfig
-@@ -250,6 +250,13 @@ config QCOM_SCM_DOWNLOAD_MODE_DEFAULT
-
- 	  Say Y here to enable "download mode" by default.
+@@ -9,2 +9,9 @@
+ source "drivers/firmware/arm_scmi/Kconfig"
 
 +config ROCKCHIP_SIP
 +	bool "Rockchip SIP interface"
@@ -91,9 +90,6 @@
 +	  Say Y here if you want to enable SIP callbacks for Rockchip platforms
 +	  This option enables support for communicating with the ATF.
 +
- config TI_SCI_PROTOCOL
- 	tristate "TI System Control Interface (TISCI) Message Protocol"
- 	depends on TI_MESSAGE_MANAGER
 --- a/drivers/firmware/Makefile
 +++ b/drivers/firmware/Makefile
 @@ -19,6 +19,7 @@
@@ -371,7 +367,7 @@
 +}
 --- a/drivers/regulator/core.c
 +++ b/drivers/regulator/core.c
-@@ -5662,6 +5662,14 @@ void regulator_unregister(struct regulat
+@@ -5773,6 +5773,14 @@ void regulator_unregister(struct regulat
  EXPORT_SYMBOL_GPL(regulator_unregister);
 
  #ifdef CONFIG_SUSPEND
@@ -386,7 +382,7 @@
  /**
   * regulator_suspend - prepare regulators for system wide suspend
   * @dev: ``&struct device`` pointer that is passed to _regulator_suspend()
-@@ -5681,6 +5689,28 @@ static int regulator_suspend(struct devi
+@@ -5792,6 +5800,28 @@ static int regulator_suspend(struct devi
 
  	regulator_lock(rdev);
  	ret = __suspend_set_state(rdev, rstate);
@@ -415,7 +411,7 @@
  	regulator_unlock(rdev);
 
  	return ret;
-@@ -5697,15 +5727,25 @@ static int regulator_resume(struct devic
+@@ -5808,15 +5838,25 @@ static int regulator_resume(struct devic
  	if (rstate == NULL)
  		return 0;
 
@@ -449,7 +445,7 @@
 
 --- a/drivers/soc/rockchip/Kconfig
 +++ b/drivers/soc/rockchip/Kconfig
-@@ -34,4 +34,10 @@ config ROCKCHIP_PM_DOMAINS
+@@ -42,4 +42,10 @@ config ROCKCHIP_PM_DOMAINS
 
            If unsure, say N.
 
@@ -462,7 +458,7 @@
  endif
 --- a/drivers/soc/rockchip/Makefile
 +++ b/drivers/soc/rockchip/Makefile
-@@ -5,3 +5,4 @@
+@@ -6,3 +6,4 @@
  obj-$(CONFIG_ROCKCHIP_IODOMAIN) += io-domain.o
  obj-$(CONFIG_ROCKCHIP_PM_DOMAINS) += pm_domains.o
  obj-$(CONFIG_ROCKCHIP_DTPM) += dtpm.o
@@ -579,7 +575,7 @@
 +#endif
 --- a/include/linux/regulator/driver.h
 +++ b/include/linux/regulator/driver.h
-@@ -470,6 +470,9 @@ struct regulator_dev {
+@@ -650,6 +650,9 @@ struct regulator_dev {
  	int cached_err;
  	bool use_cached_err;
  	spinlock_t err_lock;
