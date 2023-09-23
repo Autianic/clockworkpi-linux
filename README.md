@@ -6,10 +6,6 @@ uConsole. The screen is different from that of the DevTerm, so the DevTerm
 panel patches can't be used with the uConsole. They are still included here and
 can be chosen with some adjustments of the PKGBUILD file of the Linux package.
 
-If you experience problems with the build process, let me know. Errors should be
-something of the type like mismatching paths or checksums, so if these occur,
-you might be able to fix these easily.
-
 Based on Yatli's https://github.com/yatli/arch-linux-arm-clockworkpi-a06.git
 which in turn is based on Armbian's https://github.com/armbian/build.git
 
@@ -43,10 +39,15 @@ Using patches from ClockworkPi's https://github.com/clockworkpi/uConsole/tree/ma
 ### What's untested
 
 - mobile module
+- the CM4 module, A04 module and DevTerm hardware. I ordered these except for
+  the A04 module (out of stock) so that I could support them as well at some
+  point.
 
 ### What doesn't work right
 
-- screen may need correction for rotation.
+- screen may need correction for rotation. For KDE Plasma at least, Wayland gets
+  the rotation right and setting SDDM to also be running in Wayland will work
+  there as well (look up https://wiki.archlinux.org/title/SDDM#Running_under_Wayland).
 - audio has some slight clicks as if you would play a vinyl. Not sure whether
   this is on the ClockworkPi supplied images as well. It also sends loud pops
   via the Headphone output when powering up or down, be especially prepared if
@@ -64,8 +65,8 @@ a release.
 ### Prerequisites
 
 Setup an (aarch64) Arch Linux ARM chroot environment on a preferably beefy
-(x86_64) Arch Linux system. You may also set up a cloud server with native
-ARM hardware and build the packages there.
+Arch Linux system. You may also set up a cloud server with native ARM hardware
+and build the packages there.
 
 The packages needed on the host system are:
 
@@ -122,7 +123,8 @@ mkdir root
 bsdtar -xpf ArchLinuxARM-aarch64-latest.tar.gz -C ./root
 ```
 
-Do some `mount` black magic:
+Since the `./root` directory is just a regular directory and not a mount point,
+we need to make it act as one for the chroot session to work:
 
 ```
 mount --bind root root
@@ -142,14 +144,7 @@ Initialise and update it:
 pacman-key --init && pacman-key --populate && pacman -Syu
 ```
 
-`gpg-agent` may complain that the version it is currently running may be older
-than what got updated. Use
-
-```
-gpgconf --kill all
-```
-
-to let it restart with its updated version.
+Inspect the pacman logs for possible user intervention.
 
 Install a text editor of your choice for editing configuration files if not
 already present:
@@ -337,14 +332,18 @@ dropped from this repo.
 ## On the host: preparing the Arch Linux ARM image
 
 For this we are going to create an image that we then flash onto the SD card if
-everything goes well.
+everything goes well. This might be useful if you don't have the device yet.
+
+You may also write directly on the target SD card. You would have to replace the
+`mmc.raw` mentioned throughout the steps with the correct path to the device.
+Also some steps like resizing partitions can be skipped then.
 
 Open a new terminal session on your host, change to the directory where you
 downloaded the U-Boot images and create an empty image file using
 `dd`:
 
 ```
-dd if=/dev/zero of=./mmc.img bs=1M count=16K status=progress
+dd if=/dev/zero of=./mmc.raw bs=1M count=16K status=progress
 ```
 
 Although the `count` is `16K` it multiplies with the `bs` (block size) and
@@ -357,22 +356,24 @@ on to the target medium.
 Create a GPT partition table with MBR compatibility using gdisk:
 
 ```
-gdisk ./mmc.img
+gdisk ./mmc.raw
 ```
 
 In the prompt, use `o` to initialise a partition table. Use `n` to create a new
 partition. This is going to hold the U-Boot configuration along with the Linux
-kernel and its initramfs. Set its starting offset to sector `32768`. The U-Boot
-binaries will later be written into the preceding sectors. Size the partition
-`+1G` (include the `+` sign. Otherwise it is seen as an absolute end offset).
-When asked for a partition type, set it to Linux filesystem which would be
-gdisk's `8300` or GUID `0FC63DAF-8483-4772-8E79-3D69D8477DE4`.
+kernel and its initramfs. The partition number should be `1`. Set its starting
+offset to sector `32768`. The U-Boot binaries will later be written into the
+preceding sectors. Size the partition `+1G` (include the `+` sign. Otherwise it
+is seen as an absolute end offset). When asked for a partition type, set it to
+Linux filesystem which would be gdisk's `8300` or GUID
+`0FC63DAF-8483-4772-8E79-3D69D8477DE4`.
 
 Create another partition that is going to hold the actual OS. From that point
 you can pretty much add any other partition you want. Similar to before, use `n`
-to create a new partition, hit `Enter` with no value to have no gap to the
-previous partition, and then set i.e. `+15G` to have the partition sized `15GiB`
-or leave the value for the end offset empty to fill up the rest of the space.
+to create a new partition. Hit `Enter` to set the suggested partition number.
+Hit `Enter` again with no value to have no gap to the previous partition, and
+then set i.e. `+15G` to have the partition sized `15GiB` or leave the value for
+the end offset empty to fill up the rest of the space.
 
 See `man gdisk` or https://wiki.archlinux.org/title/GPT_fdisk for help on
 `gdisk`.
@@ -387,15 +388,15 @@ all went well.
 
 Switch to the root user.
 
-Bind the `./mmc.img` file as a loop device so that we have better access to the
+Bind the `./mmc.raw` file as a loop device so that we have better access to the
 partitions inside that image:
 
 ```
-udisksctl loop-setup -f ./mmc.img
+udisksctl loop-setup -f ./mmc.raw
 ```
 
 You should see a new `/dev/loopn` entry where `n` is a number. There also should
-be further devices resembling individual paritions, i.e. `/dev/loop0p1`. If you
+be further devices resembling individual partitions, i.e. `/dev/loop0p1`. If you
 want to remove the loop, issue:
 
 ```
@@ -411,19 +412,22 @@ When formatting with `ext4`, omit the journaling to reduce overall writes. The
 Example:
 
 ```
-mkfs.ext4 -L boot -O ^has_journal /dev/loop0p1
-mkfs.btrfs -m dup -d single -L OS /dev/loop0p2
+mkfs.ext4 -v -L boot -b 4096 -O ^has_journal /dev/loop0p1
+mkfs.btrfs -v -L OS -s 4096 -m single -d single /dev/loop0p2
 ```
 
 Mount both partitions. You may use mounting options i.e. to enable filesystem
-based compression. For `btrfs`, `compress-force=zstd:1` may be of interest.
+based compression. For `btrfs`, `-o compress-force=zstd:1` may be of interest.
 
 ```
 mkdir boot
 mkdir OS
-mount /dev/loop0p1 ./boot
-mount /dev/loop0p2 ./OS
+mount /dev/loop0p1 -o noatime ./boot
+mount /dev/loop0p2 -o noatime ./OS
 ```
+
+Get the Arch Linux ARM at http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz
+if you haven't already.
 
 Extract the Arch Linux ARM rootfs into the second mounted partition using the
 same tar archive that was used for the build chroot environment.
@@ -444,18 +448,23 @@ second partition, i.e.
 ```
 umount ./boot
 rmdir ./boot
-mount /dev/loop0p1 ./OS/boot
+mount /dev/loop0p1 -o noatime ./OS/boot
 ```
 
-Create a subdirectory called `extlinux` in the mounted boot partition. In that
-newly created directory, create a file named `extlinux.conf` with the following
-content:
+Create a subdirectory called `extlinux` in the mounted boot partition.
+
+```
+mkdir ./OS/boot/extlinux
+```
+
+In that newly created directory, create a file named `extlinux.conf` with the
+following content:
 
 ```
 LABEL Arch ARM
 KERNEL /Image
 FDT /dtbs/rockchip/rk3399-clockworkpi-a06.dtb
-APPEND initrd=/initramfs-linux.img root=UUID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa rw rootwait audit=0
+APPEND initrd=/initramfs-linux.img root=UUID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa rootflags=defaults,noatime rw rootwait audit=0 nowatchdog
 ```
 
 Replace the UUID with the one matching the OS partition. The partitions may be
@@ -465,20 +474,11 @@ listed with `lsblk`. You may need to run it as root to get full information:
 lsblk -o NAME,UUID,LABEL,MOUNTPOINTS
 ```
 
-Copy the `/boot/Image` and `/boot/initramfs-linux.img` to the same directory as
-the `./mmc.img` on the host so that these can be later used for a QEMU VM, i.e.:
+Pick the UUID of the matching partition and use that to reference the partition
+in the kernel options and in the `fstab`.
 
-```
-cp ./OS/boot/Image ./
-cp ./OS/boot/initramfs-linux.img ./
-```
-
-Change the permissions on the copied files so that you can access these with
-your user. Replace `user` and `group` with your regular user name and group.
-
-```
-chown user:group ./Image ./initramfs-linux.img
-```
+Note down the UUID for the kernel options of the VM startup script that will be
+created later.
 
 Append `fstab` entries as root so that UUIDs can be resolved like in the `lsblk`
 call (make sure no chroot sessions are running on `./OS` otherwise chroot
@@ -489,6 +489,14 @@ remove the offending lines):
 genfstab -t UUID ./OS >> ./OS/etc/fstab
 ```
 
+While we are at the `fstab`, you may like to append an entry for a share
+directory to transfer files in and out of the VM we may be using later:
+
+```
+mkdir ./OS/mnt/share
+printf '%s\n' 'vfs0	/mnt/share	9p	defaults,user,trans=virtio,version=9p2000.L,msize=1048576,nofail 0 2' >> ./OS/etc/fstab
+```
+
 Make sure that all desired packages are built or are downloaded from the
 release section.
 
@@ -496,10 +504,27 @@ Copy the package files to a place inside `./OS` from which you will later
 install them, i.e. `./OS/root/`.
 
 You may now like to chroot into `./OS` and proceed with the initialisation of
-the Arch installation as you like. If you want to start with a VM, continue
-without the chroot. If chrooting, install the built packages using the
+the Arch installation as you like. You may use the `Arch Linux ARM chroot environment setup`
+section further above as a quick reference. If you want to start with a VM,
+continue without the chroot. If chrooting, install the built packages using the
 instructions in the `Package installation` section further down. When you're
 done, continue here.
+
+Copy the `/boot/Image` and `/boot/initramfs-linux.img` to the same directory as
+the `./mmc.raw` on the host so that these can be later used for a QEMU VM, i.e.:
+
+```
+cp ./OS/boot/Image ./
+cp ./OS/boot/initramfs-linux.img ./
+```
+
+Change the permissions on the copied files so that you can access these with
+your user. Replace `user` and `group` with your regular user name and group
+(usually your user has its own group with the same name as the user).
+
+```
+chown user:group ./Image ./initramfs-linux.img
+```
 
 Unmount the first and second partition and remove the loop device:
 
@@ -512,12 +537,12 @@ udisksctl loop-delete -b /dev/loopn
 Get `idbloader-ddr-800MHz.img`, `uboot.img`, `trust.img` from the release
 section if you haven't built U-Boot.
 
-`dd` the U-Boot binaries into the `./mmc.img`:
+`dd` the U-Boot binaries into the `./mmc.raw`:
 
 ```
-dd if=./idbloader-ddr-800MHz.img of=./mmc.img bs=512 seek=64 conv=notrunc,fsync
-dd if=./uboot.img of=./mmc.img bs=512 seek=16384 conv=notrunc,fsync
-dd if=./trust.img of=./mmc.img bs=512 seek=24576 conv=notrunc,fsync
+dd if=./idbloader-ddr-800MHz.img of=./mmc.raw bs=512 seek=64 conv=notrunc,fsync
+dd if=./uboot.img of=./mmc.raw bs=512 seek=16384 conv=notrunc,fsync
+dd if=./trust.img of=./mmc.raw bs=512 seek=24576 conv=notrunc,fsync
 ```
 
 `exit` root and proceed with the next steps.
@@ -530,10 +555,12 @@ the image is flashed to the SD card. If you already made a base installation
 and also happen to have installed the built packages including the custom built
 Linux kernel, you may skip this section.
 
-Create a subdirectory called `shared`, which may be used to conveniently
-transfer files in and out of the VM.
+Create a subdirectory called `share`, which may be used to conveniently
+transfer files in and out of the VM. The directory is referenced in the
+`-virtfs` argument of the following script and you may have created an `fstab`
+entry for it earlier on.
 
-Create a `start.sh` shell script next to the `mmc.img` for the VM:
+Create a `start.sh` shell script next to the `mmc.raw` for the VM:
 
 ```
 #/bin/sh
@@ -562,9 +589,9 @@ qemu-system-aarch64 \
 	-device usb-audio \
 	-kernel ./Image \
 	-initrd ./initramfs-linux.img \
-	-append 'root=UUID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa rw rootwait audit=0' \
-	-drive file=./mmc.img,format=raw,media=disk,index=0,readonly=off \
-	-virtfs local,path=./shared,mount_tag=vfs0,security_model=mapped-xattr,id=vfs0 \
+	-append 'root=UUID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa rootflags=defaults,noatime rw rootwait audit=0 nowatchdog' \
+	-drive file=./mmc.raw,format=raw,media=disk,index=0,readonly=off \
+	-virtfs local,path=./share,mount_tag=vfs0,security_model=mapped-xattr,id=vfs0 \
 
 ```
 
@@ -581,38 +608,37 @@ The startup will take a while, give it a bit of time and it will start logging
 into the terminal. Later also the graphical output will be initialised. When the
 startup process has settled, you can start working on the OS.
 
-If you want to automatically mount the share directory across reboots, use the
-`fstab` entry:
-
-```
-vfs0	/mnt/share	9p	defaults,noauto,user,trans=virtio,version=9p2000.L,msize=8388608,nofail 0 2
-```
-
 ### Package installation
 
-Copy over the previously generated packages if not done already and replace the
-Linux kernel on the target system via (adjust the paths as needed):
+Copy over the previously generated packages if not done already and install the
+Linux kernel along with other desired packages on the target system via (adjust
+the paths as needed):
 
 ```
-pacman -U linux-clockworkpi-a06-x.x.x-1-aarch64.pkg.tar.xz
-pacman -U linux-clockworkpi-a06-headers-x.x.x-1-aarch64.pkg.tar.xz
+pacman -U \
+	linux-clockworkpi-a06-x.x.x-1-aarch64.pkg.tar.xz \
+	linux-clockworkpi-a06-headers-x.x.x-1-aarch64.pkg.tar.xz \
+	uboot-clockworkpi-a06-2022.04-3-aarch64.pkg.tar.xz \
+	networking-clockworkpi-a06-1.0-1-any.pkg.tar.xz \
+	audio-clockworkpi-a06-1.0-1-aarch64.pkg.tar.xz \
+
 ```
 
 If there are conflicting files, those should be the dts files that reside in the
 `/boot/dtbs` directory. Delete the conflicting files and retry the installation.
 
 Watch the `pacman` install logs and adjust the `mkinitcpio` configuration to
-load the modules needed for the display panel and more.
+load the modules needed for the display panel and more if the install procedure
+wasn't able to do that.
 
-Also install the other packages as needed to get WiFi, bluetooth and audio
-working.
+Also install the other packages as desired.
 
 Return to the section you came from, if you were directed here.
 
 ### Flashing the prepared image onto the SD card
 
 Once everything is done, shut the VM or chroot session down and make sure
-outstanding writes to the `mmc.img` are done and nothing is writing to it and
+outstanding writes to the `mmc.raw` are done and nothing is writing to it and
 nothing of it is mounted.
 
 You may now `dd` the image to the SD card. Due to buffering the first bunch of
@@ -623,19 +649,16 @@ the command shell should drop you back to the prompt.
 
 After that, you probably want to expand the OS filesystem. Use gdisk or some
 other tool to update the partition table to the new size, otherwise partitoning
-tools may still think that the SD card is of a small size.
-
-Using `gdisk`, perform `r` to get into recovery and transformation options, `d`
-to use the main GPT header to create the backup GPT header at the end of of the
-space and write the changes using `w`, accept with `y` and continue. The
-partitions are not changed.
+tools may think that the SD card is of a small size (the same size as the image
+that was used for the SD card).
 
 Using `gdisk`, use `w` to let gdisk detect the new medium size and place the
 second GPT header to a new location, accept the correction with `y` and accept
 with `y` again to write the changes to the SD card. The partitions are not
-yet changed.
+changed yet.
 
-Afterwards the OS partition can be resized using gparted or partitionmanager.
+Afterwards the OS partition can be resized using gparted, partitionmanager or
+any other appropriate partition manager.
 
 When done, eject the SD card using `eject /dev/disk/by-id/...` (you may also use
 the classic `/dev/sdx` path pattern instead of `/dev/disk/...`), insert it into
@@ -659,7 +682,7 @@ That's it.
 ## See also
 
 If you want to further tweak your system, you may like to have a look at the
-following pages:
+following points:
 
 - KDE Plasma 5
 	- https://wiki.archlinux.org/title/SDDM#KDE_/_KWin
@@ -677,7 +700,9 @@ following pages:
 		  much got rid of that problem, feel free to experiment.
 - VLC
 	- The default number of threads for the `dav1d` decoder might be too
-	  low, resulting in as low as two threads. Raise it manually to 6.
+	  low, resulting in as low as two threads. Check the number of decoder
+	  threads that are actually created and raise it manually to 6 if
+	  needed.
 	- Use the OpenGL ES output and the EGL backend for better performance.
 
 # Credits
