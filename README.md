@@ -11,6 +11,13 @@ which in turn is based on Armbian's https://github.com/armbian/build.git
 
 Using patches from ClockworkPi's https://github.com/clockworkpi/uConsole/tree/master/Code/patch/a06/20230630
 
+## Notice
+
+Linux kernel packages have been moved over to https://github.com/autianic/clockworkpi-linux-kernel.git.
+The package build process is the same as before, the packages just have a
+different location and should reduce the release overhead of this repo caused by
+each kernel update.
+
 ## Compatibility
 
 ### What works
@@ -217,14 +224,19 @@ Switch to the home directory of the `alarm` user, without any arguments:
 cd
 ```
 
-Clone this repo and `cd` into it:
+##### Cloning repositories
+
+Clone this repo and the Linux kernel repo:
 
 ```
 git clone https://github.com/autianic/clockworkpi-linux.git
-cd clockworkpi-linux
+git clone https://github.com/autianic/clockworkpi-linux-kernel.git
 ```
 
-There are several directories in which packages are built:
+There are several sub-directories in both of those repos in which packages are
+built.
+
+This repo (clockworkpi-linux):
 
 | Package			| Purpose					|
 | ----------------------------- | --------------------------------------------- |
@@ -232,13 +244,18 @@ There are several directories in which packages are built:
 | ffmpeg-v4l2-request-git	| Patched FFmpeg with support for hardware accelerated video decoding for rockchip SoCs. |
 | ffmpeg4.4-v4l2-request-git	| Same but for FFmpeg version 4.4.		|
 | gearbox-clockworkpi-a06	| CLI utility to set CPU/GPU profiles.		|
-| linux-clockworkpi-a06		| Patched Linux kernel with support for ClockworkPi hardware. |
-| linux-clockworkpi-a06-llvm	| Same as above but built with LLVM/Clang instead of gcc. |
-| linux-clockworkpi-a06-llvm-lto	| Same as above but with full LTO.	|
 | networking-clockworkpi-a06	| Firmware files for Broadcom BCM4345C5 to support WiFi and Bluetooth. |
 | rkbin-aarch64-hack		| Needed to build `uboot-clockworkpi-a06`.	|
 | uboot-clockworkpi-a06		| U-Boot images.				|
 | wiringpi-clockworkpi		| GPIO Access Library for the ClockworkPi A06 and A04 modules. |
+
+And the repo for the Linux kernel (clockworkpi-linux-kernel):
+
+| Package				| Purpose							|
+| ------------------------------------- | ------------------------------------------------------------- |
+| linux-clockworkpi-a06			| Patched Linux kernel with support for ClockworkPi hardware. 	|
+| linux-clockworkpi-a06-llvm		| Same as above but built with LLVM/Clang instead of gcc. 	|
+| linux-clockworkpi-a06-llvm-lto	| Same as above but with full LTO.				|
 
 To build a package, `cd` into a directory you are interested in and build it
 using, though read a bit further before building anything yet:
@@ -247,14 +264,58 @@ using, though read a bit further before building anything yet:
 MAKEFLAGS="-j$(nproc)" makepkg -si
 ```
 
+##### Usage of makepkg
+
+The `MAKEFLAGS="-j$(nproc)"` statement sets an environment variable for `make`
+so that the build process uses as many threads as your system has via `make`'s
+`-j` option.
+
+The `-s` option of `makepkg` will try to install the needed packages in order to
+build the package. As we are doing this in a chroot session, the host system
+won't be affected.
+
+The `-i` option will install the package after the build process. As hinted in
+the tables above it is needed to meet the build requirements for other packages.
+
 The options `--noextract --noprepare --skipchecksums` may additionally be useful
 for troubleshooting or to continue an aborted build session. These instruct
 `makepkg` to not recreate the extracted, patched and compiled kernel source when
 rebuilding the package.
 
-If the build fails, make sure that the subdirectories `pkg` and `src` don't
-exist to ensure a clean build before you start building the package using
+If the build fails, you might need to delete the subdirectories `pkg` and `src`
+to ensure a clean build before you start building the package again using
 `makepkg`.
+
+The most interesting packages regarding basic hardware support are:
+
+- `audio-clockworkpi-a06`
+- `networking-clockworkpi-a06`
+- `linux-clockworkpi-a06`
+
+Prefer to compile the Linux package last.
+
+There are also `llvm` and `llvm-lto` variants if you would like to use these
+instead. In most workloads these should not make much of a difference.
+
+##### Starting to build packages
+
+Now start compiling the desired packages and continue with the following steps
+in the mean time.
+
+It is probably worth to temporarily set a power management option to prevent the
+system from sleeping. The building process takes a long time considering that we
+have an chroot session of a different architecture running. On my laptop with an
+Intel i7 2630QM (Sandy Bridge (2nd Gen), 4 Cores, 8 Threads) it took a day to
+complete. On an AMD Ryzen 9 5950X it takes about an hour.
+
+Periodically check the progress, there may be a prompt to ask what to do with
+new compiling options that aren't handled in our `config` file. You can accept
+the default answer by just hitting Enter, though you might like to have a closer
+look and compile some drivers as kernel modules (answer `m`). Eventually the
+terminal cursor will stop at the start of a new line and it will then start to
+build the kernel.
+
+##### U-Boot
 
 U-Boot images will be later used to write them into an area of the first 32K
 sectors. You may get these from the releases section instead:
@@ -290,32 +351,7 @@ cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockwork
 cp ./root/home/alarm/clockworkpi-linux/uboot-clockworkpi-a06/pkg/uboot-clockworkpi-a06/boot/trust.img ./
 ```
 
-The most interesting packages regarding basic hardware support are:
-
-- `audio-clockworkpi-a06`
-- `networking-clockworkpi-a06`
-- `linux-clockworkpi-a06`
-
-Prefer to compile the Linux package last.
-
-There are also `llvm` and `llvm-lto` variants if you would like to use these
-instead. In most workloads these should not make much of a difference.
-
-Start compiling the mentioned packages and continue with the following steps in
-the mean time.
-
-It is probably worth to temporarily set a power management option to prevent the
-system from sleeping. The building process takes a long time considering that we
-have an chroot session of a different architecture running. On my laptop with an
-Intel i7 2630QM (Sandy Bridge (2nd Gen), 4 Cores, 8 Threads) it took a day to
-complete.
-
-Periodically check the progress, there may be a prompt to ask what to do with
-new compiling options that aren't handled in our `config` file. You can accept
-the default answer by just hitting Enter, though you might like to have a closer
-look and compile some drivers as kernel modules (answer `m`). Eventually the
-terminal cursor will stop at the start of a new line and it will then start to
-build the kernel.
+##### Deprecation
 
 Note: the packages
 
